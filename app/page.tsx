@@ -19,126 +19,16 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
-  Calendar,
-  Award,
-  ArrowRight,
-  FileText,
-  BarChart3,
-  Lightbulb,
-  Target,
   AlertTriangle,
   RefreshCw,
+  Download,
+  PieChart,
+  LineChart,
+  List,
+  Zap,
+  Target,
+  ArrowRight,
 } from "lucide-react"
-
-// Version 8 Template interfaces
-interface KeywordOpportunities {
-  total_found: number
-  priority_keywords: string[]
-  long_tail_opportunities: string[]
-}
-
-interface ContentGaps {
-  missing_topics: string[]
-  gap_count: number
-  coverage_score: number
-}
-
-interface CompetitorAnalysis {
-  competitors_found: number
-  competitor_domains: string[]
-}
-
-interface SEOReport {
-  analysis_date: string
-  seo_score: number
-  current_keywords: string[]
-  keyword_opportunities: KeywordOpportunities
-  content_gaps: ContentGaps
-  competitor_analysis: CompetitorAnalysis
-  recommendations: string[]
-  next_steps: string[]
-}
-
-interface LeadInfo {
-  email: string
-  analysis_date: string
-}
-
-interface RequestInfo {
-  website_url: string
-  main_topic: string
-  email: string | null
-}
-
-interface DetailedAnalysis {
-  overview?: {
-    analysis_date?: string
-    website_url?: string
-    overall_score?: number
-    grade?: string
-    status?: string
-  }
-  page_details?: {
-    title?: string
-    meta_description?: string
-    content_length?: number
-    reading_time?: number
-    headings_count?: number
-  }
-  seo_factors?: {
-    title_analysis?: {
-      length?: number
-      status?: string
-      score?: number
-      feedback?: string[]
-    }
-    meta_description_analysis?: {
-      length?: number
-      status?: string
-      score?: number
-      feedback?: string[]
-    }
-    content_analysis?: {
-      word_count?: number
-      character_count?: number
-      reading_time?: number
-      status?: string
-      score?: number
-      feedback?: string[]
-    }
-    keyword_analysis?: {
-      total_keywords?: number
-      status?: string
-      score?: number
-      feedback?: string[]
-    }
-  }
-  top_keywords?: Array<{
-    keyword: string
-    frequency: number
-    importance: string
-  }>
-  recommendations?: Array<{
-    priority: string
-    category: string
-    issue: string
-    solution: string
-    impact: string
-  }>
-  action_items?: string[]
-}
-
-// Version 8 Template response format
-interface AnalysisResponse {
-  version: number
-  timestamp: string
-  request_info: RequestInfo
-  seo_report: SEOReport
-  lead_info: LeadInfo
-  detailed_analysis: DetailedAnalysis | null
-  error?: string
-  details?: string
-}
 
 export default function SEOAnalyzer() {
   const [formData, setFormData] = useState({
@@ -147,9 +37,8 @@ export default function SEOAnalyzer() {
     email: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult] = useState<AnalysisResponse | null>(null)
+  const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
 
   const validateUrl = (url: string) => {
     try {
@@ -209,11 +98,6 @@ export default function SEOAnalyzer() {
         throw new Error(data.error)
       }
 
-      // Validate the response has the expected structure
-      if (!data.seo_report || !data.seo_report.analysis_date) {
-        throw new Error("Invalid response format: Missing required SEO report data")
-      }
-
       setResult(data)
     } catch (err) {
       console.error("Error during analysis:", err)
@@ -224,7 +108,6 @@ export default function SEOAnalyzer() {
   }
 
   const handleRetry = () => {
-    setRetryCount((prev) => prev + 1)
     handleSubmit(new Event("submit") as any)
   }
 
@@ -265,26 +148,51 @@ export default function SEOAnalyzer() {
         return "just now"
       }
 
-      const now = new Date()
-      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-
-      if (diffInHours < 1) return "just now"
-      if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? "s" : ""} ago`
-
-      const diffInDays = Math.floor(diffInHours / 24)
-      if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? "s" : ""} ago`
-
-      return date.toLocaleDateString()
+      return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     } catch (e) {
       return "just now"
     }
   }
 
-  // Safe access to the result data
-  const seoReport = result?.seo_report
-  const leadInfo = result?.lead_info
-  const detailedAnalysis = result?.detailed_analysis
-  const requestInfo = result?.request_info
+  // Extract keywords from the current_keywords array
+  const extractKeywords = () => {
+    if (!result?.seo_report?.current_keywords) return []
+
+    // If current_keywords is an array of objects with word and count properties
+    if (
+      Array.isArray(result.seo_report.current_keywords) &&
+      result.seo_report.current_keywords.length > 0 &&
+      result.seo_report.current_keywords[0].word
+    ) {
+      // Extract the first 10 words from the content
+      const content = result.seo_report.current_keywords[0].word || ""
+      const words = content
+        .split(/\s+/)
+        .filter(
+          (word) =>
+            word.length > 5 &&
+            !word.includes("/") &&
+            !word.match(/^\d+$/) &&
+            !word.match(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/),
+        )
+
+      // Get unique words and take the first 10
+      const uniqueWords = [...new Set(words)].slice(0, 10)
+      return uniqueWords.map((word) => ({ word, count: 1 }))
+    }
+
+    return result.seo_report.current_keywords
+  }
+
+  // Get SEO report data
+  const seoReport = result?.seo_report || {}
+  const leadInfo = result?.lead_info || {}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -300,11 +208,6 @@ export default function SEOAnalyzer() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Discover untapped keywords and content opportunities to grow your website's visibility
           </p>
-          {result?.version && (
-            <Badge variant="outline" className="bg-blue-50 text-blue-700">
-              Version {result.version} Template
-            </Badge>
-          )}
         </div>
 
         {/* Analysis Form */}
@@ -454,306 +357,295 @@ export default function SEOAnalyzer() {
           </Card>
         )}
 
-        {/* Results Section - Version 8 Template */}
-        {result && seoReport && (
-          <Card className="shadow-lg border-0">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center space-x-2 text-green-700">
-                    <CheckCircle className="h-5 w-5" />
-                    <span>Analysis Complete!</span>
-                  </CardTitle>
-                  <CardDescription className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>Analyzed {formatDate(seoReport.analysis_date)}</span>
-                  </CardDescription>
+        {/* Results Section - Tailored for n8n webhook response */}
+        {result && !isLoading && !error && (
+          <div className="space-y-8">
+            {/* Overview Card */}
+            <Card className="shadow-lg border-0 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold">SEO Analysis Results</h2>
+                    <p className="text-blue-100">
+                      Analysis for {formData.websiteUrl} • {formatDate(seoReport.analysis_date)}
+                    </p>
+                  </div>
+                  <div className="bg-white text-blue-600 rounded-full p-4 font-bold text-xl">
+                    {seoReport.seo_score || 0}
+                  </div>
                 </div>
-                {typeof seoReport.seo_score === "number" && (
-                  <div className={`p-3 rounded-full ${getScoreBackground(seoReport.seo_score)}`}>
-                    <div className="text-2xl font-bold text-center">
-                      <span className={getScoreColor(seoReport.seo_score)}>{seoReport.seo_score}</span>
-                      <span className="text-gray-400 text-sm">/100</span>
+              </div>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg flex items-center space-x-4">
+                    <div className="bg-blue-100 p-3 rounded-full">
+                      <Target className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Keywords Found</div>
+                      <div className="text-xl font-bold">{extractKeywords().length}</div>
                     </div>
                   </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid grid-cols-5 mb-6">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="keywords">Keywords</TabsTrigger>
-                  <TabsTrigger value="content">Content</TabsTrigger>
-                  <TabsTrigger value="action">Action Plan</TabsTrigger>
-                  {detailedAnalysis && <TabsTrigger value="detailed">Detailed</TabsTrigger>}
-                </TabsList>
 
-                {/* Overview Tab */}
-                <TabsContent value="overview" className="space-y-6">
-                  {/* Request Info */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Analysis Request</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Website:</span>
-                          <span className="font-medium">{requestInfo?.website_url || formData.websiteUrl}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Topic:</span>
-                          <span className="font-medium">{requestInfo?.main_topic || formData.mainTopic}</span>
-                        </div>
-                        {(requestInfo?.email || formData.email) && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Email:</span>
-                            <span className="font-medium">{requestInfo?.email || formData.email}</span>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* SEO Score */}
-                  {typeof seoReport.seo_score === "number" && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">SEO Health Score</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Score</span>
-                            <span className={getScoreColor(seoReport.seo_score)}>{seoReport.seo_score}/100</span>
-                          </div>
-                          <Progress value={seoReport.seo_score} className="h-2" />
-                        </div>
-                        <p className={`text-sm ${getScoreColor(seoReport.seo_score)}`}>
-                          {getScoreMessage(seoReport.seo_score)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500">Keyword Opportunities</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{seoReport.keyword_opportunities?.total_found ?? 0}</div>
-                        <p className="text-sm text-gray-600">Potential keywords found</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500">Content Gaps</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{seoReport.content_gaps?.gap_count ?? 0}</div>
-                        <p className="text-sm text-gray-600">Missing content topics</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm text-gray-500">Content Coverage</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{seoReport.content_gaps?.coverage_score ?? 0}%</div>
-                        <p className="text-sm text-gray-600">Topic coverage score</p>
-                      </CardContent>
-                    </Card>
+                  <div className="bg-green-50 p-4 rounded-lg flex items-center space-x-4">
+                    <div className="bg-green-100 p-3 rounded-full">
+                      <LineChart className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Content Coverage</div>
+                      <div className="text-xl font-bold">{seoReport.content_gaps?.coverage_score || 0}%</div>
+                    </div>
                   </div>
 
-                  {/* Competitors */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Competitor Insights</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-4">
-                        We found {seoReport.competitor_analysis?.competitors_found ?? 0} competitors in your niche
-                      </p>
-                      {seoReport.competitor_analysis?.competitor_domains?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {seoReport.competitor_analysis.competitor_domains.map((domain, index) => (
-                            <Badge key={index} variant="outline" className="bg-gray-100">
-                              {domain}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm italic text-gray-500">No specific competitors identified</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                  <div className="bg-purple-50 p-4 rounded-lg flex items-center space-x-4">
+                    <div className="bg-purple-100 p-3 rounded-full">
+                      <List className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Recommendations</div>
+                      <div className="text-xl font-bold">
+                        {Array.isArray(seoReport.recommendations) ? seoReport.recommendations.length : 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                {/* Keywords Tab */}
-                <TabsContent value="keywords" className="space-y-6">
-                  {/* Current Keywords */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Your Current Keywords</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {seoReport.current_keywords?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {seoReport.current_keywords.map((keyword, index) => (
-                            <Badge key={index} className="bg-gray-200 text-gray-800">
-                              {keyword}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm italic text-gray-500">
-                          We couldn't detect any clear keywords on your site
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
+                <Tabs defaultValue="overview" className="w-full">
+                  <TabsList className="grid grid-cols-4 mb-6">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="keywords">Keywords</TabsTrigger>
+                    <TabsTrigger value="content">Content</TabsTrigger>
+                    <TabsTrigger value="action-plan">Action Plan</TabsTrigger>
+                  </TabsList>
 
-                  {/* Priority Keywords */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg flex items-center space-x-2">
-                        <Award className="h-4 w-4 text-yellow-500" />
-                        <span>Priority Keywords to Target</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-4">
-                        These high-value keywords can drive significant traffic to your website
-                      </p>
-                      {seoReport.keyword_opportunities?.priority_keywords?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {seoReport.keyword_opportunities.priority_keywords.map((keyword, index) => (
+                  {/* Overview Tab */}
+                  <TabsContent value="overview" className="space-y-6">
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Analysis Summary</h3>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center pb-2 border-b">
+                          <span className="text-gray-600">Website URL</span>
+                          <span className="font-medium">{formData.websiteUrl}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-2 border-b">
+                          <span className="text-gray-600">Main Topic</span>
+                          <span className="font-medium">{formData.mainTopic}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-2 border-b">
+                          <span className="text-gray-600">Analysis Date</span>
+                          <span className="font-medium">{formatDate(seoReport.analysis_date)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-2 border-b">
+                          <span className="text-gray-600">Overall Score</span>
+                          <span className={`font-medium ${getScoreColor(seoReport.seo_score || 0)}`}>
+                            {seoReport.seo_score || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Key Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white p-6 rounded-lg shadow-sm border">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center">
+                          <PieChart className="h-5 w-5 mr-2 text-blue-500" />
+                          SEO Health
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Overall Score</span>
+                              <span className={`font-medium ${getScoreColor(seoReport.seo_score || 0)}`}>
+                                {seoReport.seo_score || 0}/100
+                              </span>
+                            </div>
+                            <Progress value={seoReport.seo_score || 0} className="h-2" />
+                          </div>
+                          <p className="text-sm text-gray-600">{getScoreMessage(seoReport.seo_score || 0)}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-6 rounded-lg shadow-sm border">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center">
+                          <Zap className="h-5 w-5 mr-2 text-yellow-500" />
+                          Content Coverage
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Coverage Score</span>
+                              <span
+                                className={`font-medium ${(seoReport.content_gaps?.coverage_score || 0) >= 70 ? "text-green-600" : "text-orange-600"}`}
+                              >
+                                {seoReport.content_gaps?.coverage_score || 0}%
+                              </span>
+                            </div>
+                            <Progress value={seoReport.content_gaps?.coverage_score || 0} className="h-2" />
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {(seoReport.content_gaps?.coverage_score || 0) >= 70
+                              ? "Good coverage! Your content addresses most topics in your niche."
+                              : "There's room to expand your content to cover more topics in your niche."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Keywords Tab */}
+                  <TabsContent value="keywords" className="space-y-6">
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Detected Keywords</h3>
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {extractKeywords().length > 0 ? (
+                          extractKeywords().map((keyword: any, index: number) => (
+                            <Badge key={index} className="bg-gray-100 text-gray-800">
+                              {keyword.word || keyword}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-gray-500 italic">No keywords detected</p>
+                        )}
+                      </div>
+
+                      <h3 className="text-lg font-semibold mb-4 mt-8">Keyword Opportunities</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.isArray(seoReport.keyword_opportunities?.priority_keywords) &&
+                        seoReport.keyword_opportunities.priority_keywords.length > 0 ? (
+                          seoReport.keyword_opportunities.priority_keywords.map((keyword: string, index: number) => (
                             <Badge key={index} className="bg-blue-100 text-blue-800">
                               {keyword}
                             </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm italic text-gray-500">No priority keywords identified</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                          ))
+                        ) : (
+                          <p className="text-gray-500 italic">
+                            No specific keyword opportunities identified. Consider researching keywords related to your
+                            main topic.
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                  {/* Long Tail Keywords */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Long-Tail Opportunities</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-4">
-                        These specific phrases have less competition and can help you attract targeted visitors
-                      </p>
-                      {seoReport.keyword_opportunities?.long_tail_opportunities?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {seoReport.keyword_opportunities.long_tail_opportunities.map((keyword, index) => (
-                            <Badge key={index} className="bg-green-100 text-green-800">
-                              {keyword}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm italic text-gray-500">No long-tail opportunities identified</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                    {/* Long Tail Keywords */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Long-Tail Opportunities</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.isArray(seoReport.keyword_opportunities?.long_tail_opportunities) &&
+                        seoReport.keyword_opportunities.long_tail_opportunities.length > 0 ? (
+                          seoReport.keyword_opportunities.long_tail_opportunities.map(
+                            (keyword: string, index: number) => (
+                              <Badge key={index} className="bg-green-100 text-green-800">
+                                {keyword}
+                              </Badge>
+                            ),
+                          )
+                        ) : (
+                          <p className="text-gray-500 italic">
+                            No long-tail opportunities identified. Consider creating more specific content that
+                            addresses detailed questions in your niche.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
 
-                {/* Content Tab */}
-                <TabsContent value="content" className="space-y-6">
-                  {/* Content Gaps */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Content Gaps</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-4">
-                        These are topics your audience is searching for that your website doesn't cover yet
-                      </p>
-                      {seoReport.content_gaps?.missing_topics?.length > 0 ? (
+                  {/* Content Tab */}
+                  <TabsContent value="content" className="space-y-6">
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Content Analysis</h3>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Content Coverage Score</span>
+                            <span
+                              className={`font-medium ${(seoReport.content_gaps?.coverage_score || 0) >= 70 ? "text-green-600" : "text-orange-600"}`}
+                            >
+                              {seoReport.content_gaps?.coverage_score || 0}%
+                            </span>
+                          </div>
+                          <Progress value={seoReport.content_gaps?.coverage_score || 0} className="h-2" />
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">
+                          {(seoReport.content_gaps?.coverage_score || 0) >= 70
+                            ? "Your content covers most of the important topics in your niche."
+                            : "Consider expanding your content to cover more topics in your niche."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Content Gaps */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Content Gaps</h3>
+                      {Array.isArray(seoReport.content_gaps?.missing_topics) &&
+                      seoReport.content_gaps.missing_topics.length > 0 ? (
                         <div className="space-y-3">
-                          {seoReport.content_gaps.missing_topics.map((topic, index) => (
-                            <div key={index} className="flex items-start space-x-2">
-                              <div className="w-2 h-2 bg-orange-400 rounded-full mt-2 flex-shrink-0" />
-                              <span className="text-gray-700">{topic}</span>
+                          {seoReport.content_gaps.missing_topics.map((topic: string, index: number) => (
+                            <div key={index} className="flex items-start space-x-2 p-3 bg-orange-50 rounded-lg">
+                              <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                              <span>{topic}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm italic text-gray-500">No specific content gaps identified</p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Content Coverage */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Content Coverage</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Coverage Score</span>
-                          <span
-                            className={
-                              (seoReport.content_gaps?.coverage_score ?? 0) >= 70 ? "text-green-600" : "text-orange-600"
-                            }
-                          >
-                            {seoReport.content_gaps?.coverage_score ?? 0}%
-                          </span>
+                        <div className="p-4 bg-green-50 rounded-lg">
+                          <p className="text-green-700">
+                            No significant content gaps detected. Your content appears to cover the main topics in your
+                            niche well.
+                          </p>
                         </div>
-                        <Progress value={seoReport.content_gaps?.coverage_score ?? 0} className="h-2" />
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        {(seoReport.content_gaps?.coverage_score ?? 0) >= 70
-                          ? "Good coverage! Your content addresses most topics in your niche."
-                          : "There's room to expand your content to cover more topics in your niche."}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+                      )}
+                    </div>
 
-                {/* Action Plan Tab */}
-                <TabsContent value="action" className="space-y-6">
-                  {/* Recommendations */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Recommendations</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                    {/* Competitor Analysis */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Competitor Analysis</h3>
+                      {seoReport.competitor_analysis?.competitors_found > 0 ? (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-4">
+                            We found {seoReport.competitor_analysis.competitors_found} competitors in your niche
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {seoReport.competitor_analysis.competitor_domains.map((domain: string, index: number) => (
+                              <Badge key={index} variant="outline" className="bg-gray-100">
+                                {domain}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">
+                          No specific competitors identified. Consider researching competitors in your niche to
+                          understand their content strategies.
+                        </p>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  {/* Action Plan Tab */}
+                  <TabsContent value="action-plan" className="space-y-6">
+                    {/* Recommendations */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Recommendations</h3>
                       <div className="space-y-3">
-                        {seoReport.recommendations?.length > 0 ? (
-                          seoReport.recommendations.map((rec, index) => (
+                        {Array.isArray(seoReport.recommendations) && seoReport.recommendations.length > 0 ? (
+                          seoReport.recommendations.map((rec: string, index: number) => (
                             <div key={index} className="flex items-start space-x-3 bg-blue-50 p-3 rounded-lg">
                               <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
                               <span className="text-gray-700">{rec}</span>
                             </div>
                           ))
                         ) : (
-                          <p className="text-sm italic text-gray-500">No specific recommendations available</p>
+                          <p className="text-gray-500 italic">No specific recommendations available</p>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
 
-                  {/* Next Steps */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Your Action Plan</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {seoReport.next_steps?.length > 0 ? (
+                    {/* Next Steps */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4">Your Action Plan</h3>
+                      {Array.isArray(seoReport.next_steps) && seoReport.next_steps.length > 0 ? (
                         <ol className="space-y-4">
-                          {seoReport.next_steps.map((step, index) => (
+                          {seoReport.next_steps.map((step: string, index: number) => (
                             <li key={index} className="flex items-start space-x-3">
                               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-800 flex items-center justify-center font-bold text-sm">
                                 {index + 1}
@@ -763,378 +655,40 @@ export default function SEOAnalyzer() {
                           ))}
                         </ol>
                       ) : (
-                        <p className="text-sm italic text-gray-500">No specific action steps available</p>
+                        <p className="text-gray-500 italic">No specific action steps available</p>
                       )}
-                    </CardContent>
-                    <CardFooter className="pt-2">
-                      <Button className="w-full bg-green-600 hover:bg-green-700">
-                        <span>Download Full Action Plan</span>
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </div>
+
+                    {/* Download Action Plan */}
+                    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-lg text-white">
+                      <h3 className="text-lg font-semibold mb-2">Ready to improve your SEO?</h3>
+                      <p className="mb-4">
+                        Download your personalized action plan and start implementing these recommendations today.
+                      </p>
+                      <Button className="bg-white text-blue-600 hover:bg-blue-50">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Action Plan
                       </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-
-                {/* Detailed Analysis Tab */}
-                {detailedAnalysis && (
-                  <TabsContent value="detailed" className="space-y-6">
-                    {/* Grade Card */}
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center space-x-2">
-                          <Award className="h-5 w-5 text-yellow-500" />
-                          <span>SEO Grade: {detailedAnalysis.overview?.grade || "N/A"}</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="p-4 rounded-lg bg-gray-50">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-gray-600">Status:</span>
-                            <span className="font-medium">{detailedAnalysis.overview?.status || "Not Available"}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Website:</span>
-                            <span className="font-medium">
-                              {detailedAnalysis.overview?.website_url || formData.websiteUrl}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Page Details */}
-                    {detailedAnalysis.page_details && (
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg flex items-center space-x-2">
-                            <FileText className="h-5 w-5 text-blue-500" />
-                            <span>Page Details</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="p-3 border rounded-lg">
-                              <div className="text-sm text-gray-500 mb-1">Title</div>
-                              <div className="font-medium">
-                                {detailedAnalysis.page_details.title || "No title detected"}
-                              </div>
-                            </div>
-
-                            <div className="p-3 border rounded-lg">
-                              <div className="text-sm text-gray-500 mb-1">Meta Description</div>
-                              <div className="font-medium">
-                                {detailedAnalysis.page_details.meta_description || "No meta description detected"}
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="p-3 border rounded-lg">
-                                <div className="text-sm text-gray-500 mb-1">Content Length</div>
-                                <div className="font-medium">
-                                  {detailedAnalysis.page_details.content_length || 0} chars
-                                </div>
-                              </div>
-
-                              <div className="p-3 border rounded-lg">
-                                <div className="text-sm text-gray-500 mb-1">Reading Time</div>
-                                <div className="font-medium">{detailedAnalysis.page_details.reading_time || 0} min</div>
-                              </div>
-
-                              <div className="p-3 border rounded-lg">
-                                <div className="text-sm text-gray-500 mb-1">Headings</div>
-                                <div className="font-medium">{detailedAnalysis.page_details.headings_count || 0}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* SEO Factors */}
-                    {detailedAnalysis.seo_factors && (
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg flex items-center space-x-2">
-                            <BarChart3 className="h-5 w-5 text-purple-500" />
-                            <span>SEO Factor Analysis</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-6">
-                            {/* Title Analysis */}
-                            {detailedAnalysis.seo_factors.title_analysis && (
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="font-medium">Title Analysis</div>
-                                  <Badge
-                                    className={
-                                      detailedAnalysis.seo_factors.title_analysis.status === "Excellent"
-                                        ? "bg-green-100 text-green-800"
-                                        : detailedAnalysis.seo_factors.title_analysis.status === "Good"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-orange-100 text-orange-800"
-                                    }
-                                  >
-                                    {detailedAnalysis.seo_factors.title_analysis.status || "Unknown"}
-                                  </Badge>
-                                </div>
-                                <div className="space-y-2 mt-2">
-                                  <div className="flex justify-between text-sm">
-                                    <span>Score</span>
-                                    <span>{detailedAnalysis.seo_factors.title_analysis.score || 0}/25</span>
-                                  </div>
-                                  <Progress
-                                    value={((detailedAnalysis.seo_factors.title_analysis.score || 0) / 25) * 100}
-                                    className="h-2"
-                                  />
-                                  <div className="text-sm text-gray-600 mt-1">
-                                    Length: {detailedAnalysis.seo_factors.title_analysis.length || 0} characters
-                                  </div>
-                                  <div className="space-y-1 mt-2">
-                                    {detailedAnalysis.seo_factors.title_analysis.feedback?.map((item, i) => (
-                                      <div key={i} className="text-sm">
-                                        {item}
-                                      </div>
-                                    )) || <div className="text-sm italic">No feedback available</div>}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Meta Description Analysis */}
-                            {detailedAnalysis.seo_factors.meta_description_analysis && (
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="font-medium">Meta Description Analysis</div>
-                                  <Badge
-                                    className={
-                                      detailedAnalysis.seo_factors.meta_description_analysis.status === "Excellent"
-                                        ? "bg-green-100 text-green-800"
-                                        : detailedAnalysis.seo_factors.meta_description_analysis.status === "Good"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-orange-100 text-orange-800"
-                                    }
-                                  >
-                                    {detailedAnalysis.seo_factors.meta_description_analysis.status || "Unknown"}
-                                  </Badge>
-                                </div>
-                                <div className="space-y-2 mt-2">
-                                  <div className="flex justify-between text-sm">
-                                    <span>Score</span>
-                                    <span>{detailedAnalysis.seo_factors.meta_description_analysis.score || 0}/20</span>
-                                  </div>
-                                  <Progress
-                                    value={
-                                      ((detailedAnalysis.seo_factors.meta_description_analysis.score || 0) / 20) * 100
-                                    }
-                                    className="h-2"
-                                  />
-                                  <div className="text-sm text-gray-600 mt-1">
-                                    Length: {detailedAnalysis.seo_factors.meta_description_analysis.length || 0}{" "}
-                                    characters
-                                  </div>
-                                  <div className="space-y-1 mt-2">
-                                    {detailedAnalysis.seo_factors.meta_description_analysis.feedback?.map((item, i) => (
-                                      <div key={i} className="text-sm">
-                                        {item}
-                                      </div>
-                                    )) || <div className="text-sm italic">No feedback available</div>}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Content Analysis */}
-                            {detailedAnalysis.seo_factors.content_analysis && (
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="font-medium">Content Analysis</div>
-                                  <Badge
-                                    className={
-                                      detailedAnalysis.seo_factors.content_analysis.status === "Excellent"
-                                        ? "bg-green-100 text-green-800"
-                                        : detailedAnalysis.seo_factors.content_analysis.status === "Good"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-orange-100 text-orange-800"
-                                    }
-                                  >
-                                    {detailedAnalysis.seo_factors.content_analysis.status || "Unknown"}
-                                  </Badge>
-                                </div>
-                                <div className="space-y-2 mt-2">
-                                  <div className="flex justify-between text-sm">
-                                    <span>Score</span>
-                                    <span>{detailedAnalysis.seo_factors.content_analysis.score || 0}/25</span>
-                                  </div>
-                                  <Progress
-                                    value={((detailedAnalysis.seo_factors.content_analysis.score || 0) / 25) * 100}
-                                    className="h-2"
-                                  />
-                                  <div className="text-sm text-gray-600 mt-1">
-                                    Word count: {detailedAnalysis.seo_factors.content_analysis.word_count || 0} words
-                                  </div>
-                                  <div className="space-y-1 mt-2">
-                                    {detailedAnalysis.seo_factors.content_analysis.feedback?.map((item, i) => (
-                                      <div key={i} className="text-sm">
-                                        {item}
-                                      </div>
-                                    )) || <div className="text-sm italic">No feedback available</div>}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Keyword Analysis */}
-                            {detailedAnalysis.seo_factors.keyword_analysis && (
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="font-medium">Keyword Analysis</div>
-                                  <Badge
-                                    className={
-                                      detailedAnalysis.seo_factors.keyword_analysis.status === "Excellent"
-                                        ? "bg-green-100 text-green-800"
-                                        : detailedAnalysis.seo_factors.keyword_analysis.status === "Good"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-orange-100 text-orange-800"
-                                    }
-                                  >
-                                    {detailedAnalysis.seo_factors.keyword_analysis.status || "Unknown"}
-                                  </Badge>
-                                </div>
-                                <div className="space-y-2 mt-2">
-                                  <div className="flex justify-between text-sm">
-                                    <span>Score</span>
-                                    <span>{detailedAnalysis.seo_factors.keyword_analysis.score || 0}/20</span>
-                                  </div>
-                                  <Progress
-                                    value={((detailedAnalysis.seo_factors.keyword_analysis.score || 0) / 20) * 100}
-                                    className="h-2"
-                                  />
-                                  <div className="text-sm text-gray-600 mt-1">
-                                    Keywords found: {detailedAnalysis.seo_factors.keyword_analysis.total_keywords || 0}
-                                  </div>
-                                  <div className="space-y-1 mt-2">
-                                    {detailedAnalysis.seo_factors.keyword_analysis.feedback?.map((item, i) => (
-                                      <div key={i} className="text-sm">
-                                        {item}
-                                      </div>
-                                    )) || <div className="text-sm italic">No feedback available</div>}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Top Keywords */}
-                    {detailedAnalysis.top_keywords && detailedAnalysis.top_keywords.length > 0 && (
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg flex items-center space-x-2">
-                            <Target className="h-5 w-5 text-blue-500" />
-                            <span>Detected Keywords</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                              {detailedAnalysis.top_keywords.map((keyword, index) => (
-                                <div
-                                  key={index}
-                                  className={`p-3 rounded-lg flex justify-between items-center ${
-                                    keyword.importance === "High"
-                                      ? "bg-blue-50 border border-blue-200"
-                                      : keyword.importance === "Medium"
-                                        ? "bg-green-50 border border-green-200"
-                                        : "bg-gray-50 border border-gray-200"
-                                  }`}
-                                >
-                                  <span className="font-medium">{keyword.keyword}</span>
-                                  <Badge
-                                    className={
-                                      keyword.importance === "High"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : keyword.importance === "Medium"
-                                          ? "bg-green-100 text-green-800"
-                                          : "bg-gray-100 text-gray-800"
-                                    }
-                                  >
-                                    {keyword.frequency}×
-                                  </Badge>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Detailed Recommendations */}
-                    {detailedAnalysis.recommendations && detailedAnalysis.recommendations.length > 0 && (
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg flex items-center space-x-2">
-                            <Lightbulb className="h-5 w-5 text-yellow-500" />
-                            <span>Detailed Recommendations</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            {detailedAnalysis.recommendations.map((rec, index) => (
-                              <div
-                                key={index}
-                                className={`p-4 rounded-lg border ${
-                                  rec.priority === "High"
-                                    ? "border-red-200 bg-red-50"
-                                    : rec.priority === "Medium"
-                                      ? "border-yellow-200 bg-yellow-50"
-                                      : "border-blue-200 bg-blue-50"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="font-medium">{rec.category}</div>
-                                  <Badge
-                                    className={
-                                      rec.priority === "High"
-                                        ? "bg-red-100 text-red-800"
-                                        : rec.priority === "Medium"
-                                          ? "bg-yellow-100 text-yellow-800"
-                                          : "bg-blue-100 text-blue-800"
-                                    }
-                                  >
-                                    {rec.priority} Priority
-                                  </Badge>
-                                </div>
-                                <div className="text-sm text-gray-700 mb-2">
-                                  <span className="font-medium">Issue:</span> {rec.issue}
-                                </div>
-                                <div className="text-sm text-gray-700 mb-2">
-                                  <span className="font-medium">Solution:</span> {rec.solution}
-                                </div>
-                                <div className="text-sm text-gray-700">
-                                  <span className="font-medium">Impact:</span> {rec.impact}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                    </div>
                   </TabsContent>
-                )}
-              </Tabs>
-            </CardContent>
-          </Card>
+                </Tabs>
+              </CardContent>
+              <CardFooter className="bg-gray-50 p-6 flex justify-between items-center">
+                <div className="text-sm text-gray-500">Analysis performed on {formatDate(seoReport.analysis_date)}</div>
+                <div className="flex space-x-2">
+                  <Button variant="outline" className="flex items-center space-x-2">
+                    <ArrowRight className="h-4 w-4" />
+                    <span>Schedule Follow-up</span>
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
         )}
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm pb-8">
           <p>Powered by advanced SEO analysis algorithms</p>
-          {result?.timestamp && (
-            <p className="mt-1">Analysis performed on {new Date(result.timestamp).toLocaleString()}</p>
-          )}
         </div>
       </div>
     </div>
