@@ -26,8 +26,11 @@ import {
   BarChart3,
   Lightbulb,
   Target,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react"
 
+// Version 8 Template interfaces
 interface KeywordOpportunities {
   total_found: number
   priority_keywords: string[]
@@ -61,68 +64,80 @@ interface LeadInfo {
   analysis_date: string
 }
 
+interface RequestInfo {
+  website_url: string
+  main_topic: string
+  email: string | null
+}
+
 interface DetailedAnalysis {
-  overview: {
-    analysis_date: string
-    website_url: string
-    overall_score: number
-    grade: string
-    status: string
+  overview?: {
+    analysis_date?: string
+    website_url?: string
+    overall_score?: number
+    grade?: string
+    status?: string
   }
-  page_details: {
-    title: string
-    meta_description: string
-    content_length: number
-    reading_time: number
-    headings_count: number
+  page_details?: {
+    title?: string
+    meta_description?: string
+    content_length?: number
+    reading_time?: number
+    headings_count?: number
   }
-  seo_factors: {
-    title_analysis: {
-      length: number
-      status: string
-      score: number
-      feedback: string[]
+  seo_factors?: {
+    title_analysis?: {
+      length?: number
+      status?: string
+      score?: number
+      feedback?: string[]
     }
-    meta_description_analysis: {
-      length: number
-      status: string
-      score: number
-      feedback: string[]
+    meta_description_analysis?: {
+      length?: number
+      status?: string
+      score?: number
+      feedback?: string[]
     }
-    content_analysis: {
-      word_count: number
-      character_count: number
-      reading_time: number
-      status: string
-      score: number
-      feedback: string[]
+    content_analysis?: {
+      word_count?: number
+      character_count?: number
+      reading_time?: number
+      status?: string
+      score?: number
+      feedback?: string[]
     }
-    keyword_analysis: {
-      total_keywords: number
-      status: string
-      score: number
-      feedback: string[]
+    keyword_analysis?: {
+      total_keywords?: number
+      status?: string
+      score?: number
+      feedback?: string[]
     }
   }
-  top_keywords: Array<{
+  top_keywords?: Array<{
     keyword: string
     frequency: number
     importance: string
   }>
-  recommendations: Array<{
+  recommendations?: Array<{
     priority: string
     category: string
     issue: string
     solution: string
     impact: string
   }>
-  action_items: string[]
+  action_items?: string[]
 }
 
-interface AnalysisResult {
+// Version 8 Template response format
+interface AnalysisResponse {
+  version: number
+  timestamp: string
+  request_info: RequestInfo
   seo_report: SEOReport
   lead_info: LeadInfo
-  detailed_analysis?: DetailedAnalysis
+  detailed_analysis: DetailedAnalysis | null
+  error?: string
+  details?: string
 }
 
 export default function SEOAnalyzer() {
@@ -132,8 +147,9 @@ export default function SEOAnalyzer() {
     email: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults] = useState<AnalysisResult[] | null>(null)
+  const [result, setResult] = useState<AnalysisResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   const validateUrl = (url: string) => {
     try {
@@ -153,7 +169,7 @@ export default function SEOAnalyzer() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setResults(null)
+    setResult(null)
 
     // Validation
     if (!formData.websiteUrl || !formData.mainTopic) {
@@ -188,78 +204,28 @@ export default function SEOAnalyzer() {
 
       const data = await response.json()
 
-      // Validate and process the response data
-      if (Array.isArray(data) && data.length > 0) {
-        // Ensure each result has the required properties with default values if missing
-        const processedResults = data.map((result) => ({
-          seo_report: {
-            analysis_date: result.seo_report?.analysis_date || new Date().toISOString(),
-            seo_score: result.seo_report?.seo_score ?? 0,
-            current_keywords: result.seo_report?.current_keywords || [],
-            keyword_opportunities: {
-              total_found: result.seo_report?.keyword_opportunities?.total_found ?? 0,
-              priority_keywords: result.seo_report?.keyword_opportunities?.priority_keywords || [],
-              long_tail_opportunities: result.seo_report?.keyword_opportunities?.long_tail_opportunities || [],
-            },
-            content_gaps: {
-              missing_topics: result.seo_report?.content_gaps?.missing_topics || [],
-              gap_count: result.seo_report?.content_gaps?.gap_count ?? 0,
-              coverage_score: result.seo_report?.content_gaps?.coverage_score ?? 0,
-            },
-            competitor_analysis: {
-              competitors_found: result.seo_report?.competitor_analysis?.competitors_found ?? 0,
-              competitor_domains: result.seo_report?.competitor_analysis?.competitor_domains || [],
-            },
-            recommendations: result.seo_report?.recommendations || [],
-            next_steps: result.seo_report?.next_steps || [],
-          },
-          lead_info: {
-            email: result.lead_info?.email || formData.email || "",
-            analysis_date: result.lead_info?.analysis_date || new Date().toISOString(),
-          },
-          detailed_analysis: result.detailed_analysis || null,
-        }))
-        setResults(processedResults)
-      } else if (data && typeof data === "object") {
-        // Handle single object response
-        const processedResult = {
-          seo_report: {
-            analysis_date: data.seo_report?.analysis_date || new Date().toISOString(),
-            seo_score: data.seo_report?.seo_score ?? 0,
-            current_keywords: data.seo_report?.current_keywords || [],
-            keyword_opportunities: {
-              total_found: data.seo_report?.keyword_opportunities?.total_found ?? 0,
-              priority_keywords: data.seo_report?.keyword_opportunities?.priority_keywords || [],
-              long_tail_opportunities: data.seo_report?.keyword_opportunities?.long_tail_opportunities || [],
-            },
-            content_gaps: {
-              missing_topics: data.seo_report?.content_gaps?.missing_topics || [],
-              gap_count: data.seo_report?.content_gaps?.gap_count ?? 0,
-              coverage_score: data.seo_report?.content_gaps?.coverage_score ?? 0,
-            },
-            competitor_analysis: {
-              competitors_found: data.seo_report?.competitor_analysis?.competitors_found ?? 0,
-              competitor_domains: data.seo_report?.competitor_analysis?.competitor_domains || [],
-            },
-            recommendations: data.seo_report?.recommendations || [],
-            next_steps: data.seo_report?.next_steps || [],
-          },
-          lead_info: {
-            email: data.lead_info?.email || formData.email || "",
-            analysis_date: data.lead_info?.analysis_date || new Date().toISOString(),
-          },
-          detailed_analysis: data.detailed_analysis || null,
-        }
-        setResults([processedResult])
-      } else {
-        throw new Error("Invalid response format from server")
+      // Check for error in response
+      if (data.error) {
+        throw new Error(data.error)
       }
+
+      // Validate the response has the expected structure
+      if (!data.seo_report || !data.seo_report.analysis_date) {
+        throw new Error("Invalid response format: Missing required SEO report data")
+      }
+
+      setResult(data)
     } catch (err) {
       console.error("Error during analysis:", err)
       setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleRetry = () => {
+    setRetryCount((prev) => prev + 1)
+    handleSubmit(new Event("submit") as any)
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -314,11 +280,11 @@ export default function SEOAnalyzer() {
     }
   }
 
-  // Safe access to the first result
-  const firstResult = results?.[0]
-  const seoReport = firstResult?.seo_report
-  const leadInfo = firstResult?.lead_info
-  const detailedAnalysis = firstResult?.detailed_analysis
+  // Safe access to the result data
+  const seoReport = result?.seo_report
+  const leadInfo = result?.lead_info
+  const detailedAnalysis = result?.detailed_analysis
+  const requestInfo = result?.request_info
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -334,6 +300,11 @@ export default function SEOAnalyzer() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Discover untapped keywords and content opportunities to grow your website's visibility
           </p>
+          {result?.version && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+              Version {result.version} Template
+            </Badge>
+          )}
         </div>
 
         {/* Analysis Form */}
@@ -462,23 +433,29 @@ export default function SEOAnalyzer() {
           <Card className="shadow-lg border-0 border-red-200">
             <CardContent className="flex flex-col items-center justify-center py-8">
               <div className="flex items-center justify-center space-x-4 mb-6">
-                <XCircle className="h-8 w-8 text-red-500" />
+                <AlertTriangle className="h-8 w-8 text-red-500" />
                 <h3 className="text-xl font-medium text-gray-700">Analysis Error</h3>
               </div>
               <p className="text-gray-600 text-center max-w-md mb-6">{error}</p>
-              <Button
-                onClick={() => setError(null)}
-                variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50"
-              >
-                Try Again
-              </Button>
+              <div className="flex space-x-4">
+                <Button onClick={handleRetry} className="bg-red-600 hover:bg-red-700">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Retry Analysis
+                </Button>
+                <Button
+                  onClick={() => setError(null)}
+                  variant="outline"
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  Dismiss
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Results Section */}
-        {results && results.length > 0 && (
+        {/* Results Section - Version 8 Template */}
+        {result && seoReport && (
           <Card className="shadow-lg border-0">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -489,10 +466,10 @@ export default function SEOAnalyzer() {
                   </CardTitle>
                   <CardDescription className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4" />
-                    <span>Analyzed {formatDate(seoReport?.analysis_date)}</span>
+                    <span>Analyzed {formatDate(seoReport.analysis_date)}</span>
                   </CardDescription>
                 </div>
-                {typeof seoReport?.seo_score === "number" && (
+                {typeof seoReport.seo_score === "number" && (
                   <div className={`p-3 rounded-full ${getScoreBackground(seoReport.seo_score)}`}>
                     <div className="text-2xl font-bold text-center">
                       <span className={getScoreColor(seoReport.seo_score)}>{seoReport.seo_score}</span>
@@ -514,6 +491,31 @@ export default function SEOAnalyzer() {
 
                 {/* Overview Tab */}
                 <TabsContent value="overview" className="space-y-6">
+                  {/* Request Info */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Analysis Request</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Website:</span>
+                          <span className="font-medium">{requestInfo?.website_url || formData.websiteUrl}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Topic:</span>
+                          <span className="font-medium">{requestInfo?.main_topic || formData.mainTopic}</span>
+                        </div>
+                        {(requestInfo?.email || formData.email) && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Email:</span>
+                            <span className="font-medium">{requestInfo?.email || formData.email}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   {/* SEO Score */}
                   {typeof seoReport.seo_score === "number" && (
                     <Card>
@@ -781,234 +783,253 @@ export default function SEOAnalyzer() {
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center space-x-2">
                           <Award className="h-5 w-5 text-yellow-500" />
-                          <span>SEO Grade: {detailedAnalysis.overview.grade}</span>
+                          <span>SEO Grade: {detailedAnalysis.overview?.grade || "N/A"}</span>
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="p-4 rounded-lg bg-gray-50">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-gray-600">Status:</span>
-                            <span className="font-medium">{detailedAnalysis.overview.status}</span>
+                            <span className="font-medium">{detailedAnalysis.overview?.status || "Not Available"}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">Website:</span>
-                            <span className="font-medium">{detailedAnalysis.overview.website_url}</span>
+                            <span className="font-medium">
+                              {detailedAnalysis.overview?.website_url || formData.websiteUrl}
+                            </span>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
                     {/* Page Details */}
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center space-x-2">
-                          <FileText className="h-5 w-5 text-blue-500" />
-                          <span>Page Details</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="p-3 border rounded-lg">
-                            <div className="text-sm text-gray-500 mb-1">Title</div>
-                            <div className="font-medium">
-                              {detailedAnalysis.page_details.title || "No title detected"}
-                            </div>
-                          </div>
-
-                          <div className="p-3 border rounded-lg">
-                            <div className="text-sm text-gray-500 mb-1">Meta Description</div>
-                            <div className="font-medium">
-                              {detailedAnalysis.page_details.meta_description || "No meta description detected"}
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4">
+                    {detailedAnalysis.page_details && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center space-x-2">
+                            <FileText className="h-5 w-5 text-blue-500" />
+                            <span>Page Details</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
                             <div className="p-3 border rounded-lg">
-                              <div className="text-sm text-gray-500 mb-1">Content Length</div>
-                              <div className="font-medium">{detailedAnalysis.page_details.content_length} chars</div>
+                              <div className="text-sm text-gray-500 mb-1">Title</div>
+                              <div className="font-medium">
+                                {detailedAnalysis.page_details.title || "No title detected"}
+                              </div>
                             </div>
 
                             <div className="p-3 border rounded-lg">
-                              <div className="text-sm text-gray-500 mb-1">Reading Time</div>
-                              <div className="font-medium">{detailedAnalysis.page_details.reading_time} min</div>
+                              <div className="text-sm text-gray-500 mb-1">Meta Description</div>
+                              <div className="font-medium">
+                                {detailedAnalysis.page_details.meta_description || "No meta description detected"}
+                              </div>
                             </div>
 
-                            <div className="p-3 border rounded-lg">
-                              <div className="text-sm text-gray-500 mb-1">Headings</div>
-                              <div className="font-medium">{detailedAnalysis.page_details.headings_count}</div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="p-3 border rounded-lg">
+                                <div className="text-sm text-gray-500 mb-1">Content Length</div>
+                                <div className="font-medium">
+                                  {detailedAnalysis.page_details.content_length || 0} chars
+                                </div>
+                              </div>
+
+                              <div className="p-3 border rounded-lg">
+                                <div className="text-sm text-gray-500 mb-1">Reading Time</div>
+                                <div className="font-medium">{detailedAnalysis.page_details.reading_time || 0} min</div>
+                              </div>
+
+                              <div className="p-3 border rounded-lg">
+                                <div className="text-sm text-gray-500 mb-1">Headings</div>
+                                <div className="font-medium">{detailedAnalysis.page_details.headings_count || 0}</div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* SEO Factors */}
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg flex items-center space-x-2">
-                          <BarChart3 className="h-5 w-5 text-purple-500" />
-                          <span>SEO Factor Analysis</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-6">
-                          {/* Title Analysis */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-medium">Title Analysis</div>
-                              <Badge
-                                className={
-                                  detailedAnalysis.seo_factors.title_analysis.status === "Excellent"
-                                    ? "bg-green-100 text-green-800"
-                                    : detailedAnalysis.seo_factors.title_analysis.status === "Good"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-orange-100 text-orange-800"
-                                }
-                              >
-                                {detailedAnalysis.seo_factors.title_analysis.status}
-                              </Badge>
-                            </div>
-                            <div className="space-y-2 mt-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Score</span>
-                                <span>{detailedAnalysis.seo_factors.title_analysis.score}/25</span>
-                              </div>
-                              <Progress
-                                value={(detailedAnalysis.seo_factors.title_analysis.score / 25) * 100}
-                                className="h-2"
-                              />
-                              <div className="text-sm text-gray-600 mt-1">
-                                Length: {detailedAnalysis.seo_factors.title_analysis.length} characters
-                              </div>
-                              <div className="space-y-1 mt-2">
-                                {detailedAnalysis.seo_factors.title_analysis.feedback.map((item, i) => (
-                                  <div key={i} className="text-sm">
-                                    {item}
+                    {detailedAnalysis.seo_factors && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center space-x-2">
+                            <BarChart3 className="h-5 w-5 text-purple-500" />
+                            <span>SEO Factor Analysis</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-6">
+                            {/* Title Analysis */}
+                            {detailedAnalysis.seo_factors.title_analysis && (
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="font-medium">Title Analysis</div>
+                                  <Badge
+                                    className={
+                                      detailedAnalysis.seo_factors.title_analysis.status === "Excellent"
+                                        ? "bg-green-100 text-green-800"
+                                        : detailedAnalysis.seo_factors.title_analysis.status === "Good"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-orange-100 text-orange-800"
+                                    }
+                                  >
+                                    {detailedAnalysis.seo_factors.title_analysis.status || "Unknown"}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2 mt-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span>Score</span>
+                                    <span>{detailedAnalysis.seo_factors.title_analysis.score || 0}/25</span>
                                   </div>
-                                ))}
+                                  <Progress
+                                    value={((detailedAnalysis.seo_factors.title_analysis.score || 0) / 25) * 100}
+                                    className="h-2"
+                                  />
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    Length: {detailedAnalysis.seo_factors.title_analysis.length || 0} characters
+                                  </div>
+                                  <div className="space-y-1 mt-2">
+                                    {detailedAnalysis.seo_factors.title_analysis.feedback?.map((item, i) => (
+                                      <div key={i} className="text-sm">
+                                        {item}
+                                      </div>
+                                    )) || <div className="text-sm italic">No feedback available</div>}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            )}
 
-                          {/* Meta Description Analysis */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-medium">Meta Description Analysis</div>
-                              <Badge
-                                className={
-                                  detailedAnalysis.seo_factors.meta_description_analysis.status === "Excellent"
-                                    ? "bg-green-100 text-green-800"
-                                    : detailedAnalysis.seo_factors.meta_description_analysis.status === "Good"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-orange-100 text-orange-800"
-                                }
-                              >
-                                {detailedAnalysis.seo_factors.meta_description_analysis.status}
-                              </Badge>
-                            </div>
-                            <div className="space-y-2 mt-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Score</span>
-                                <span>{detailedAnalysis.seo_factors.meta_description_analysis.score}/20</span>
-                              </div>
-                              <Progress
-                                value={(detailedAnalysis.seo_factors.meta_description_analysis.score / 20) * 100}
-                                className="h-2"
-                              />
-                              <div className="text-sm text-gray-600 mt-1">
-                                Length: {detailedAnalysis.seo_factors.meta_description_analysis.length} characters
-                              </div>
-                              <div className="space-y-1 mt-2">
-                                {detailedAnalysis.seo_factors.meta_description_analysis.feedback.map((item, i) => (
-                                  <div key={i} className="text-sm">
-                                    {item}
+                            {/* Meta Description Analysis */}
+                            {detailedAnalysis.seo_factors.meta_description_analysis && (
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="font-medium">Meta Description Analysis</div>
+                                  <Badge
+                                    className={
+                                      detailedAnalysis.seo_factors.meta_description_analysis.status === "Excellent"
+                                        ? "bg-green-100 text-green-800"
+                                        : detailedAnalysis.seo_factors.meta_description_analysis.status === "Good"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-orange-100 text-orange-800"
+                                    }
+                                  >
+                                    {detailedAnalysis.seo_factors.meta_description_analysis.status || "Unknown"}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2 mt-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span>Score</span>
+                                    <span>{detailedAnalysis.seo_factors.meta_description_analysis.score || 0}/20</span>
                                   </div>
-                                ))}
+                                  <Progress
+                                    value={
+                                      ((detailedAnalysis.seo_factors.meta_description_analysis.score || 0) / 20) * 100
+                                    }
+                                    className="h-2"
+                                  />
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    Length: {detailedAnalysis.seo_factors.meta_description_analysis.length || 0}{" "}
+                                    characters
+                                  </div>
+                                  <div className="space-y-1 mt-2">
+                                    {detailedAnalysis.seo_factors.meta_description_analysis.feedback?.map((item, i) => (
+                                      <div key={i} className="text-sm">
+                                        {item}
+                                      </div>
+                                    )) || <div className="text-sm italic">No feedback available</div>}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            )}
 
-                          {/* Content Analysis */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-medium">Content Analysis</div>
-                              <Badge
-                                className={
-                                  detailedAnalysis.seo_factors.content_analysis.status === "Excellent"
-                                    ? "bg-green-100 text-green-800"
-                                    : detailedAnalysis.seo_factors.content_analysis.status === "Good"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-orange-100 text-orange-800"
-                                }
-                              >
-                                {detailedAnalysis.seo_factors.content_analysis.status}
-                              </Badge>
-                            </div>
-                            <div className="space-y-2 mt-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Score</span>
-                                <span>{detailedAnalysis.seo_factors.content_analysis.score}/25</span>
-                              </div>
-                              <Progress
-                                value={(detailedAnalysis.seo_factors.content_analysis.score / 25) * 100}
-                                className="h-2"
-                              />
-                              <div className="text-sm text-gray-600 mt-1">
-                                Word count: {detailedAnalysis.seo_factors.content_analysis.word_count} words
-                              </div>
-                              <div className="space-y-1 mt-2">
-                                {detailedAnalysis.seo_factors.content_analysis.feedback.map((item, i) => (
-                                  <div key={i} className="text-sm">
-                                    {item}
+                            {/* Content Analysis */}
+                            {detailedAnalysis.seo_factors.content_analysis && (
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="font-medium">Content Analysis</div>
+                                  <Badge
+                                    className={
+                                      detailedAnalysis.seo_factors.content_analysis.status === "Excellent"
+                                        ? "bg-green-100 text-green-800"
+                                        : detailedAnalysis.seo_factors.content_analysis.status === "Good"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-orange-100 text-orange-800"
+                                    }
+                                  >
+                                    {detailedAnalysis.seo_factors.content_analysis.status || "Unknown"}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2 mt-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span>Score</span>
+                                    <span>{detailedAnalysis.seo_factors.content_analysis.score || 0}/25</span>
                                   </div>
-                                ))}
+                                  <Progress
+                                    value={((detailedAnalysis.seo_factors.content_analysis.score || 0) / 25) * 100}
+                                    className="h-2"
+                                  />
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    Word count: {detailedAnalysis.seo_factors.content_analysis.word_count || 0} words
+                                  </div>
+                                  <div className="space-y-1 mt-2">
+                                    {detailedAnalysis.seo_factors.content_analysis.feedback?.map((item, i) => (
+                                      <div key={i} className="text-sm">
+                                        {item}
+                                      </div>
+                                    )) || <div className="text-sm italic">No feedback available</div>}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            )}
 
-                          {/* Keyword Analysis */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-medium">Keyword Analysis</div>
-                              <Badge
-                                className={
-                                  detailedAnalysis.seo_factors.keyword_analysis.status === "Excellent"
-                                    ? "bg-green-100 text-green-800"
-                                    : detailedAnalysis.seo_factors.keyword_analysis.status === "Good"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-orange-100 text-orange-800"
-                                }
-                              >
-                                {detailedAnalysis.seo_factors.keyword_analysis.status}
-                              </Badge>
-                            </div>
-                            <div className="space-y-2 mt-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Score</span>
-                                <span>{detailedAnalysis.seo_factors.keyword_analysis.score}/20</span>
-                              </div>
-                              <Progress
-                                value={(detailedAnalysis.seo_factors.keyword_analysis.score / 20) * 100}
-                                className="h-2"
-                              />
-                              <div className="text-sm text-gray-600 mt-1">
-                                Keywords found: {detailedAnalysis.seo_factors.keyword_analysis.total_keywords}
-                              </div>
-                              <div className="space-y-1 mt-2">
-                                {detailedAnalysis.seo_factors.keyword_analysis.feedback.map((item, i) => (
-                                  <div key={i} className="text-sm">
-                                    {item}
+                            {/* Keyword Analysis */}
+                            {detailedAnalysis.seo_factors.keyword_analysis && (
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="font-medium">Keyword Analysis</div>
+                                  <Badge
+                                    className={
+                                      detailedAnalysis.seo_factors.keyword_analysis.status === "Excellent"
+                                        ? "bg-green-100 text-green-800"
+                                        : detailedAnalysis.seo_factors.keyword_analysis.status === "Good"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-orange-100 text-orange-800"
+                                    }
+                                  >
+                                    {detailedAnalysis.seo_factors.keyword_analysis.status || "Unknown"}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-2 mt-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span>Score</span>
+                                    <span>{detailedAnalysis.seo_factors.keyword_analysis.score || 0}/20</span>
                                   </div>
-                                ))}
+                                  <Progress
+                                    value={((detailedAnalysis.seo_factors.keyword_analysis.score || 0) / 20) * 100}
+                                    className="h-2"
+                                  />
+                                  <div className="text-sm text-gray-600 mt-1">
+                                    Keywords found: {detailedAnalysis.seo_factors.keyword_analysis.total_keywords || 0}
+                                  </div>
+                                  <div className="space-y-1 mt-2">
+                                    {detailedAnalysis.seo_factors.keyword_analysis.feedback?.map((item, i) => (
+                                      <div key={i} className="text-sm">
+                                        {item}
+                                      </div>
+                                    )) || <div className="text-sm italic">No feedback available</div>}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Top Keywords */}
-                    {detailedAnalysis.top_keywords.length > 0 && (
+                    {detailedAnalysis.top_keywords && detailedAnalysis.top_keywords.length > 0 && (
                       <Card>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg flex items-center space-x-2">
@@ -1051,7 +1072,7 @@ export default function SEOAnalyzer() {
                     )}
 
                     {/* Detailed Recommendations */}
-                    {detailedAnalysis.recommendations.length > 0 && (
+                    {detailedAnalysis.recommendations && detailedAnalysis.recommendations.length > 0 && (
                       <Card>
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg flex items-center space-x-2">
@@ -1111,6 +1132,9 @@ export default function SEOAnalyzer() {
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm pb-8">
           <p>Powered by advanced SEO analysis algorithms</p>
+          {result?.timestamp && (
+            <p className="mt-1">Analysis performed on {new Date(result.timestamp).toLocaleString()}</p>
+          )}
         </div>
       </div>
     </div>
