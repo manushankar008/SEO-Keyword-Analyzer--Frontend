@@ -410,42 +410,45 @@ export async function POST(request: NextRequest) {
     // In a production environment, you would call the webhook
     const analysisResult = generateSEOAnalysis(body)
 
-    // Return the analysis result
+    // Ensure we always return a properly structured response
+    const analysisResult2 = generateSEOAnalysis(body)
+
+    // Format the response to match the expected structure
     return NextResponse.json([
       {
         seo_report: {
-          analysis_date: analysisResult.timestamp,
-          seo_score: analysisResult.analysis.overview.overall_score,
-          current_keywords: analysisResult.analysis.top_keywords.slice(0, 3).map((k: any) => k.keyword),
+          analysis_date: new Date().toISOString(), // Ensure this is always present
+          seo_score: analysisResult2.analysis.overview.overall_score,
+          current_keywords: analysisResult2.analysis.top_keywords.slice(0, 3).map((k: any) => k.keyword),
           keyword_opportunities: {
-            total_found: analysisResult.analysis.top_keywords.length,
-            priority_keywords: analysisResult.analysis.top_keywords
+            total_found: analysisResult2.analysis.top_keywords.length,
+            priority_keywords: analysisResult2.analysis.top_keywords
               .filter((k: any) => k.importance === "High")
               .map((k: any) => k.keyword),
-            long_tail_opportunities: analysisResult.analysis.top_keywords
+            long_tail_opportunities: analysisResult2.analysis.top_keywords
               .filter((k: any) => k.importance !== "High")
               .map((k: any) => k.keyword),
           },
           content_gaps: {
-            missing_topics: analysisResult.analysis.recommendations
+            missing_topics: analysisResult2.analysis.recommendations
               .filter((r: any) => r.category === "Content Quality")
               .map((r: any) => r.issue),
-            gap_count: analysisResult.analysis.recommendations.filter((r: any) => r.category === "Content Quality")
+            gap_count: analysisResult2.analysis.recommendations.filter((r: any) => r.category === "Content Quality")
               .length,
-            coverage_score: Math.min(100, analysisResult.analysis.overview.overall_score + 20),
+            coverage_score: Math.min(100, analysisResult2.analysis.overview.overall_score + 20),
           },
           competitor_analysis: {
             competitors_found: 3,
             competitor_domains: ["competitor1.com", "competitor2.com", "competitor3.com"],
           },
-          recommendations: analysisResult.analysis.recommendations.map((r: any) => r.solution),
-          next_steps: analysisResult.analysis.action_items,
+          recommendations: analysisResult2.analysis.recommendations.map((r: any) => r.solution),
+          next_steps: analysisResult2.analysis.action_items,
         },
         lead_info: {
           email: body.email || "",
-          analysis_date: analysisResult.timestamp,
+          analysis_date: new Date().toISOString(), // Ensure this is always present
         },
-        detailed_analysis: analysisResult.analysis, // Additional detailed analysis
+        detailed_analysis: analysisResult2.analysis, // Additional detailed analysis
       },
     ])
   } catch (error) {
