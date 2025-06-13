@@ -22,6 +22,10 @@ import {
   Calendar,
   Award,
   ArrowRight,
+  FileText,
+  BarChart3,
+  Lightbulb,
+  Target,
 } from "lucide-react"
 
 interface KeywordOpportunities {
@@ -57,9 +61,68 @@ interface LeadInfo {
   analysis_date: string
 }
 
+interface DetailedAnalysis {
+  overview: {
+    analysis_date: string
+    website_url: string
+    overall_score: number
+    grade: string
+    status: string
+  }
+  page_details: {
+    title: string
+    meta_description: string
+    content_length: number
+    reading_time: number
+    headings_count: number
+  }
+  seo_factors: {
+    title_analysis: {
+      length: number
+      status: string
+      score: number
+      feedback: string[]
+    }
+    meta_description_analysis: {
+      length: number
+      status: string
+      score: number
+      feedback: string[]
+    }
+    content_analysis: {
+      word_count: number
+      character_count: number
+      reading_time: number
+      status: string
+      score: number
+      feedback: string[]
+    }
+    keyword_analysis: {
+      total_keywords: number
+      status: string
+      score: number
+      feedback: string[]
+    }
+  }
+  top_keywords: Array<{
+    keyword: string
+    frequency: number
+    importance: string
+  }>
+  recommendations: Array<{
+    priority: string
+    category: string
+    issue: string
+    solution: string
+    impact: string
+  }>
+  action_items: string[]
+}
+
 interface AnalysisResult {
   seo_report: SEOReport
   lead_info: LeadInfo
+  detailed_analysis?: DetailedAnalysis
 }
 
 export default function SEOAnalyzer() {
@@ -189,6 +252,7 @@ export default function SEOAnalyzer() {
   const firstResult = results?.[0]
   const seoReport = firstResult?.seo_report
   const leadInfo = firstResult?.lead_info
+  const detailedAnalysis = firstResult?.detailed_analysis
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -324,11 +388,12 @@ export default function SEOAnalyzer() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid grid-cols-4 mb-6">
+                <TabsList className="grid grid-cols-5 mb-6">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="keywords">Keywords</TabsTrigger>
                   <TabsTrigger value="content">Content</TabsTrigger>
                   <TabsTrigger value="action">Action Plan</TabsTrigger>
+                  {detailedAnalysis && <TabsTrigger value="detailed">Detailed</TabsTrigger>}
                 </TabsList>
 
                 {/* Overview Tab */}
@@ -591,6 +656,337 @@ export default function SEOAnalyzer() {
                     </CardFooter>
                   </Card>
                 </TabsContent>
+
+                {/* Detailed Analysis Tab */}
+                {detailedAnalysis && (
+                  <TabsContent value="detailed" className="space-y-6">
+                    {/* Grade Card */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center space-x-2">
+                          <Award className="h-5 w-5 text-yellow-500" />
+                          <span>SEO Grade: {detailedAnalysis.overview.grade}</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="p-4 rounded-lg bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-gray-600">Status:</span>
+                            <span className="font-medium">{detailedAnalysis.overview.status}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Website:</span>
+                            <span className="font-medium">{detailedAnalysis.overview.website_url}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Page Details */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center space-x-2">
+                          <FileText className="h-5 w-5 text-blue-500" />
+                          <span>Page Details</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="p-3 border rounded-lg">
+                            <div className="text-sm text-gray-500 mb-1">Title</div>
+                            <div className="font-medium">
+                              {detailedAnalysis.page_details.title || "No title detected"}
+                            </div>
+                          </div>
+
+                          <div className="p-3 border rounded-lg">
+                            <div className="text-sm text-gray-500 mb-1">Meta Description</div>
+                            <div className="font-medium">
+                              {detailedAnalysis.page_details.meta_description || "No meta description detected"}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-sm text-gray-500 mb-1">Content Length</div>
+                              <div className="font-medium">{detailedAnalysis.page_details.content_length} chars</div>
+                            </div>
+
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-sm text-gray-500 mb-1">Reading Time</div>
+                              <div className="font-medium">{detailedAnalysis.page_details.reading_time} min</div>
+                            </div>
+
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-sm text-gray-500 mb-1">Headings</div>
+                              <div className="font-medium">{detailedAnalysis.page_details.headings_count}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* SEO Factors */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center space-x-2">
+                          <BarChart3 className="h-5 w-5 text-purple-500" />
+                          <span>SEO Factor Analysis</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-6">
+                          {/* Title Analysis */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-medium">Title Analysis</div>
+                              <Badge
+                                className={
+                                  detailedAnalysis.seo_factors.title_analysis.status === "Excellent"
+                                    ? "bg-green-100 text-green-800"
+                                    : detailedAnalysis.seo_factors.title_analysis.status === "Good"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-orange-100 text-orange-800"
+                                }
+                              >
+                                {detailedAnalysis.seo_factors.title_analysis.status}
+                              </Badge>
+                            </div>
+                            <div className="space-y-2 mt-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Score</span>
+                                <span>{detailedAnalysis.seo_factors.title_analysis.score}/25</span>
+                              </div>
+                              <Progress
+                                value={(detailedAnalysis.seo_factors.title_analysis.score / 25) * 100}
+                                className="h-2"
+                              />
+                              <div className="text-sm text-gray-600 mt-1">
+                                Length: {detailedAnalysis.seo_factors.title_analysis.length} characters
+                              </div>
+                              <div className="space-y-1 mt-2">
+                                {detailedAnalysis.seo_factors.title_analysis.feedback.map((item, i) => (
+                                  <div key={i} className="text-sm">
+                                    {item}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Meta Description Analysis */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-medium">Meta Description Analysis</div>
+                              <Badge
+                                className={
+                                  detailedAnalysis.seo_factors.meta_description_analysis.status === "Excellent"
+                                    ? "bg-green-100 text-green-800"
+                                    : detailedAnalysis.seo_factors.meta_description_analysis.status === "Good"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-orange-100 text-orange-800"
+                                }
+                              >
+                                {detailedAnalysis.seo_factors.meta_description_analysis.status}
+                              </Badge>
+                            </div>
+                            <div className="space-y-2 mt-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Score</span>
+                                <span>{detailedAnalysis.seo_factors.meta_description_analysis.score}/20</span>
+                              </div>
+                              <Progress
+                                value={(detailedAnalysis.seo_factors.meta_description_analysis.score / 20) * 100}
+                                className="h-2"
+                              />
+                              <div className="text-sm text-gray-600 mt-1">
+                                Length: {detailedAnalysis.seo_factors.meta_description_analysis.length} characters
+                              </div>
+                              <div className="space-y-1 mt-2">
+                                {detailedAnalysis.seo_factors.meta_description_analysis.feedback.map((item, i) => (
+                                  <div key={i} className="text-sm">
+                                    {item}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Content Analysis */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-medium">Content Analysis</div>
+                              <Badge
+                                className={
+                                  detailedAnalysis.seo_factors.content_analysis.status === "Excellent"
+                                    ? "bg-green-100 text-green-800"
+                                    : detailedAnalysis.seo_factors.content_analysis.status === "Good"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-orange-100 text-orange-800"
+                                }
+                              >
+                                {detailedAnalysis.seo_factors.content_analysis.status}
+                              </Badge>
+                            </div>
+                            <div className="space-y-2 mt-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Score</span>
+                                <span>{detailedAnalysis.seo_factors.content_analysis.score}/25</span>
+                              </div>
+                              <Progress
+                                value={(detailedAnalysis.seo_factors.content_analysis.score / 25) * 100}
+                                className="h-2"
+                              />
+                              <div className="text-sm text-gray-600 mt-1">
+                                Word count: {detailedAnalysis.seo_factors.content_analysis.word_count} words
+                              </div>
+                              <div className="space-y-1 mt-2">
+                                {detailedAnalysis.seo_factors.content_analysis.feedback.map((item, i) => (
+                                  <div key={i} className="text-sm">
+                                    {item}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Keyword Analysis */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-medium">Keyword Analysis</div>
+                              <Badge
+                                className={
+                                  detailedAnalysis.seo_factors.keyword_analysis.status === "Excellent"
+                                    ? "bg-green-100 text-green-800"
+                                    : detailedAnalysis.seo_factors.keyword_analysis.status === "Good"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-orange-100 text-orange-800"
+                                }
+                              >
+                                {detailedAnalysis.seo_factors.keyword_analysis.status}
+                              </Badge>
+                            </div>
+                            <div className="space-y-2 mt-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Score</span>
+                                <span>{detailedAnalysis.seo_factors.keyword_analysis.score}/20</span>
+                              </div>
+                              <Progress
+                                value={(detailedAnalysis.seo_factors.keyword_analysis.score / 20) * 100}
+                                className="h-2"
+                              />
+                              <div className="text-sm text-gray-600 mt-1">
+                                Keywords found: {detailedAnalysis.seo_factors.keyword_analysis.total_keywords}
+                              </div>
+                              <div className="space-y-1 mt-2">
+                                {detailedAnalysis.seo_factors.keyword_analysis.feedback.map((item, i) => (
+                                  <div key={i} className="text-sm">
+                                    {item}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Top Keywords */}
+                    {detailedAnalysis.top_keywords.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center space-x-2">
+                            <Target className="h-5 w-5 text-blue-500" />
+                            <span>Detected Keywords</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                              {detailedAnalysis.top_keywords.map((keyword, index) => (
+                                <div
+                                  key={index}
+                                  className={`p-3 rounded-lg flex justify-between items-center ${
+                                    keyword.importance === "High"
+                                      ? "bg-blue-50 border border-blue-200"
+                                      : keyword.importance === "Medium"
+                                        ? "bg-green-50 border border-green-200"
+                                        : "bg-gray-50 border border-gray-200"
+                                  }`}
+                                >
+                                  <span className="font-medium">{keyword.keyword}</span>
+                                  <Badge
+                                    className={
+                                      keyword.importance === "High"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : keyword.importance === "Medium"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-gray-100 text-gray-800"
+                                    }
+                                  >
+                                    {keyword.frequency}×
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Detailed Recommendations */}
+                    {detailedAnalysis.recommendations.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg flex items-center space-x-2">
+                            <Lightbulb className="h-5 w-5 text-yellow-500" />
+                            <span>Detailed Recommendations</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {detailedAnalysis.recommendations.map((rec, index) => (
+                              <div
+                                key={index}
+                                className={`p-4 rounded-lg border ${
+                                  rec.priority === "High"
+                                    ? "border-red-200 bg-red-50"
+                                    : rec.priority === "Medium"
+                                      ? "border-yellow-200 bg-yellow-50"
+                                      : "border-blue-200 bg-blue-50"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="font-medium">{rec.category}</div>
+                                  <Badge
+                                    className={
+                                      rec.priority === "High"
+                                        ? "bg-red-100 text-red-800"
+                                        : rec.priority === "Medium"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : "bg-blue-100 text-blue-800"
+                                    }
+                                  >
+                                    {rec.priority} Priority
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-gray-700 mb-2">
+                                  <span className="font-medium">Issue:</span> {rec.issue}
+                                </div>
+                                <div className="text-sm text-gray-700 mb-2">
+                                  <span className="font-medium">Solution:</span> {rec.solution}
+                                </div>
+                                <div className="text-sm text-gray-700">
+                                  <span className="font-medium">Impact:</span> {rec.impact}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
+                )}
               </Tabs>
             </CardContent>
           </Card>
