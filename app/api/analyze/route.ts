@@ -11,27 +11,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Website URL and Main Topic are required" }, { status: 400 })
     }
 
-    // Call the webhook
+    console.log("Sending to webhook:", { websiteUrl: body.websiteUrl, mainTopic: body.mainTopic })
+
+    // Call the n8n webhook
     const webhookResponse = await fetch(WEBHOOK_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        websiteUrl: body.websiteUrl,
+        mainTopic: body.mainTopic,
+        email: body.email || "",
+      }),
     })
 
     if (!webhookResponse.ok) {
       throw new Error(`Webhook responded with status: ${webhookResponse.status} ${webhookResponse.statusText}`)
     }
 
-    // Parse the webhook response - the n8n response is an array with a single object
+    // Parse the webhook response - n8n returns an array with a single object
     const webhookData = await webhookResponse.json()
+    console.log("Webhook response received:", JSON.stringify(webhookData).slice(0, 200) + "...")
 
     // Return the first item from the array if it's an array, otherwise return the data as is
     const responseData = Array.isArray(webhookData) ? webhookData[0] : webhookData
-
-    // Log the response for debugging
-    console.log("Webhook response processed:", JSON.stringify(responseData).slice(0, 200) + "...")
 
     return NextResponse.json(responseData)
   } catch (error) {
