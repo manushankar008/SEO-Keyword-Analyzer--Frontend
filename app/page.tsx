@@ -160,7 +160,9 @@ export default function SEOAnalyzer() {
     }
   }
 
-  // Extract keywords from the current_keywords array
+  // Improve the keyword extraction function to get more meaningful keywords
+
+  // Replace the extractKeywords function with this improved version:
   const extractKeywords = () => {
     if (!result?.seo_report?.current_keywords) return []
 
@@ -170,21 +172,36 @@ export default function SEOAnalyzer() {
       result.seo_report.current_keywords.length > 0 &&
       result.seo_report.current_keywords[0].word
     ) {
-      // Extract the first 10 words from the content
+      // Extract meaningful keywords from the content
       const content = result.seo_report.current_keywords[0].word || ""
+
+      // Split by common separators and clean up the text
       const words = content
+        .toLowerCase()
+        .replace(/[^\w\s]/g, " ")
         .split(/\s+/)
         .filter(
           (word) =>
-            word.length > 5 &&
-            !word.includes("/") &&
-            !word.match(/^\d+$/) &&
-            !word.match(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/),
+            word.length > 4 && // Longer words are more likely to be meaningful
+            !word.match(/^\d+$/) && // Exclude numbers
+            !word.match(
+              /^(and|the|that|this|with|from|your|our|their|have|for|not|are|was|were|been|being|will|would|should|could|can|may|might|must|shall)$/,
+            ), // Exclude common stop words
         )
 
-      // Get unique words and take the first 10
-      const uniqueWords = [...new Set(words)].slice(0, 10)
-      return uniqueWords.map((word) => ({ word, count: 1 }))
+      // Count word frequency
+      const wordCount = words.reduce((acc: Record<string, number>, word: string) => {
+        acc[word] = (acc[word] || 0) + 1
+        return acc
+      }, {})
+
+      // Convert to array and sort by frequency
+      const sortedWords = Object.entries(wordCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15) // Take top 15 keywords
+        .map(([word, count]) => ({ word, count }))
+
+      return sortedWords
     }
 
     return result.seo_report.current_keywords
@@ -419,6 +436,7 @@ export default function SEOAnalyzer() {
                   </TabsList>
 
                   {/* Overview Tab */}
+
                   <TabsContent value="overview" className="space-y-6">
                     <div className="bg-white p-6 rounded-lg shadow-sm border">
                       <h3 className="text-lg font-semibold mb-4">Analysis Summary</h3>
@@ -444,24 +462,56 @@ export default function SEOAnalyzer() {
                       </div>
                     </div>
 
+                    {/* SEO Score Visualization */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold mb-4 flex items-center">
+                        <PieChart className="h-5 w-5 mr-2 text-blue-500" />
+                        SEO Health Score
+                      </h3>
+                      <div className="flex items-center justify-center mb-6">
+                        <div
+                          className={`w-32 h-32 rounded-full flex items-center justify-center ${getScoreBackground(seoReport.seo_score || 0)}`}
+                        >
+                          <div className="text-3xl font-bold text-center">
+                            <span className={getScoreColor(seoReport.seo_score || 0)}>{seoReport.seo_score || 0}</span>
+                            <span className="text-gray-400 text-sm">/100</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-center text-gray-600 mb-4">{getScoreMessage(seoReport.seo_score || 0)}</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Score</span>
+                          <span className={`font-medium ${getScoreColor(seoReport.seo_score || 0)}`}>
+                            {seoReport.seo_score || 0}/100
+                          </span>
+                        </div>
+                        <Progress value={seoReport.seo_score || 0} className="h-2" />
+                      </div>
+                    </div>
+
                     {/* Key Metrics */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-white p-6 rounded-lg shadow-sm border">
                         <h3 className="text-lg font-semibold mb-4 flex items-center">
-                          <PieChart className="h-5 w-5 mr-2 text-blue-500" />
-                          SEO Health
+                          <Target className="h-5 w-5 mr-2 text-blue-500" />
+                          Keyword Analysis
                         </h3>
                         <div className="space-y-4">
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>Overall Score</span>
-                              <span className={`font-medium ${getScoreColor(seoReport.seo_score || 0)}`}>
-                                {seoReport.seo_score || 0}/100
-                              </span>
-                            </div>
-                            <Progress value={seoReport.seo_score || 0} className="h-2" />
+                          <div className="flex justify-between items-center pb-2 border-b">
+                            <span className="text-gray-600">Keywords Detected</span>
+                            <span className="font-medium">{extractKeywords().length}</span>
                           </div>
-                          <p className="text-sm text-gray-600">{getScoreMessage(seoReport.seo_score || 0)}</p>
+                          <div className="flex justify-between items-center pb-2 border-b">
+                            <span className="text-gray-600">Keyword Opportunities</span>
+                            <span className="font-medium">{seoReport.keyword_opportunities?.total_found || 0}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600">Top Keyword</span>
+                            <span className="font-medium">
+                              {extractKeywords().length > 0 ? extractKeywords()[0].word : "N/A"}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -482,6 +532,10 @@ export default function SEOAnalyzer() {
                             </div>
                             <Progress value={seoReport.content_gaps?.coverage_score || 0} className="h-2" />
                           </div>
+                          <div className="flex justify-between items-center pb-2 border-b">
+                            <span className="text-gray-600">Content Gaps</span>
+                            <span className="font-medium">{seoReport.content_gaps?.gap_count || 0}</span>
+                          </div>
                           <p className="text-sm text-gray-600">
                             {(seoReport.content_gaps?.coverage_score || 0) >= 70
                               ? "Good coverage! Your content addresses most topics in your niche."
@@ -496,13 +550,16 @@ export default function SEOAnalyzer() {
                   <TabsContent value="keywords" className="space-y-6">
                     <div className="bg-white p-6 rounded-lg shadow-sm border">
                       <h3 className="text-lg font-semibold mb-4">Detected Keywords</h3>
-                      <div className="flex flex-wrap gap-2 mb-6">
+                      <div className="mb-6">
                         {extractKeywords().length > 0 ? (
-                          extractKeywords().map((keyword: any, index: number) => (
-                            <Badge key={index} className="bg-gray-100 text-gray-800">
-                              {keyword.word || keyword}
-                            </Badge>
-                          ))
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {extractKeywords().map((keyword: any, index: number) => (
+                              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                <span className="font-medium">{keyword.word || keyword}</span>
+                                {keyword.count && <Badge className="bg-blue-100 text-blue-800">{keyword.count}</Badge>}
+                              </div>
+                            ))}
+                          </div>
                         ) : (
                           <p className="text-gray-500 italic">No keywords detected</p>
                         )}
@@ -518,10 +575,12 @@ export default function SEOAnalyzer() {
                             </Badge>
                           ))
                         ) : (
-                          <p className="text-gray-500 italic">
-                            No specific keyword opportunities identified. Consider researching keywords related to your
-                            main topic.
-                          </p>
+                          <div className="p-4 bg-blue-50 rounded-lg w-full">
+                            <p className="text-blue-700">
+                              <strong>Recommendation:</strong> Research keywords related to "{formData.mainTopic}" to
+                              improve your SEO strategy.
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -540,10 +599,12 @@ export default function SEOAnalyzer() {
                             ),
                           )
                         ) : (
-                          <p className="text-gray-500 italic">
-                            No long-tail opportunities identified. Consider creating more specific content that
-                            addresses detailed questions in your niche.
-                          </p>
+                          <div className="p-4 bg-green-50 rounded-lg w-full">
+                            <p className="text-green-700">
+                              <strong>Tip:</strong> Create content that answers specific questions your audience is
+                              asking about {formData.mainTopic}.
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -622,6 +683,7 @@ export default function SEOAnalyzer() {
                   </TabsContent>
 
                   {/* Action Plan Tab */}
+
                   <TabsContent value="action-plan" className="space-y-6">
                     {/* Recommendations */}
                     <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -629,9 +691,18 @@ export default function SEOAnalyzer() {
                       <div className="space-y-3">
                         {Array.isArray(seoReport.recommendations) && seoReport.recommendations.length > 0 ? (
                           seoReport.recommendations.map((rec: string, index: number) => (
-                            <div key={index} className="flex items-start space-x-3 bg-blue-50 p-3 rounded-lg">
+                            <div key={index} className="flex items-start space-x-3 bg-blue-50 p-4 rounded-lg">
                               <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-700">{rec}</span>
+                              <div>
+                                <span className="text-gray-700 font-medium">{rec}</span>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {index === 0 &&
+                                    "Expand your content with targeted keywords to improve search visibility."}
+                                  {index === 1 && "Group related content together to establish topical authority."}
+                                  {index === 2 &&
+                                    "Optimize page speed, meta tags, and site structure for better rankings."}
+                                </p>
+                              </div>
                             </div>
                           ))
                         ) : (
@@ -650,7 +721,16 @@ export default function SEOAnalyzer() {
                               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 text-green-800 flex items-center justify-center font-bold text-sm">
                                 {index + 1}
                               </div>
-                              <span className="text-gray-700">{step}</span>
+                              <div>
+                                <span className="text-gray-700">{step}</span>
+                                <div className="mt-1 text-sm text-gray-500">
+                                  {index === 0 && "Estimated time: 2-3 weeks • Priority: High"}
+                                  {index === 1 && "Estimated time: 1-2 weeks • Priority: High"}
+                                  {index === 2 && "Estimated time: 2-4 weeks • Priority: Medium"}
+                                  {index === 3 && "Estimated time: Ongoing • Priority: Medium"}
+                                  {index === 4 && "Estimated time: Monthly • Priority: Medium"}
+                                </div>
+                              </div>
                             </li>
                           ))}
                         </ol>
@@ -665,10 +745,15 @@ export default function SEOAnalyzer() {
                       <p className="mb-4">
                         Download your personalized action plan and start implementing these recommendations today.
                       </p>
-                      <Button className="bg-white text-blue-600 hover:bg-blue-50">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Action Plan
-                      </Button>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button className="bg-white text-blue-600 hover:bg-blue-50">
+                          <Download className="mr-2 h-4 w-4" />
+                          Download Action Plan
+                        </Button>
+                        <Button className="bg-blue-400 bg-opacity-25 text-white hover:bg-opacity-40">
+                          Schedule Consultation
+                        </Button>
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>

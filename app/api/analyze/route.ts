@@ -28,7 +28,12 @@ export async function POST(request: NextRequest) {
     const webhookData = await webhookResponse.json()
 
     // Return the first item from the array if it's an array, otherwise return the data as is
-    return NextResponse.json(Array.isArray(webhookData) ? webhookData[0] : webhookData)
+    const responseData = Array.isArray(webhookData) ? webhookData[0] : webhookData
+
+    // Log the response for debugging
+    console.log("Webhook response processed:", JSON.stringify(responseData).slice(0, 200) + "...")
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error("Analysis API Error:", error)
 
